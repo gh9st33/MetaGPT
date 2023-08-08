@@ -37,13 +37,13 @@ class DebugError(Action):
     async def run(self, context):
         if "PASS" in context:
             return "", "the original code works fine, no need to debug"
-        
-        file_name = re.search("## File To Rewrite:\s*(.+\\.py)", context).group(1)
+
+        file_name = re.search("## File To Rewrite:\s*(.+\\.py)", context)[1]
 
         logger.info(f"Debug and rewrite {file_name}")
 
         prompt = PROMPT_TEMPLATE.format(context=context)
-        
+
         rsp = await self._aask(prompt)
 
         code = CodeParser.parse_code(block="", text=rsp)

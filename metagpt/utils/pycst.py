@@ -17,11 +17,7 @@ def get_docstring_statement(body: DocstringNode) -> cst.SimpleStatementLine:
     Returns:
         The docstring statement if it exists, None otherwise.
     """
-    if isinstance(body, cst.Module):
-        body = body.body
-    else:
-        body = body.body.body
-
+    body = body.body if isinstance(body, cst.Module) else body.body.body
     if not body:
         return
 
@@ -37,16 +33,13 @@ def get_docstring_statement(body: DocstringNode) -> cst.SimpleStatementLine:
 
     if not isinstance(expr, cst.Expr):
         return None
-    
+
     val = expr.value
     if not isinstance(val, (cst.SimpleString, cst.ConcatenatedString)):
         return None
-    
-    evaluated_value = val.evaluated_value    
-    if isinstance(evaluated_value, bytes):
-        return None
 
-    return statement
+    evaluated_value = val.evaluated_value
+    return None if isinstance(evaluated_value, bytes) else statement
 
 
 class DocstringCollector(cst.CSTVisitor):
@@ -84,8 +77,7 @@ class DocstringCollector(cst.CSTVisitor):
         if hasattr(node, "decorators") and any(i.decorator.value == "overload" for i in node.decorators):
             return
 
-        statement = get_docstring_statement(node)
-        if statement:
+        if statement := get_docstring_statement(node):
             self.docstrings[key] = statement
 
 
@@ -138,9 +130,8 @@ class DocstringTransformer(cst.CSTTransformer):
             body = updated_node.body
             if original_statement:
                 return updated_node.with_changes(body=(statement, *body[1:]))
-            else:
-                updated_node = updated_node.with_changes(body=(statement, cst.EmptyLine(), *body))
-                return updated_node
+            updated_node = updated_node.with_changes(body=(statement, cst.EmptyLine(), *body))
+            return updated_node
 
         body = updated_node.body.body[1:] if original_statement else updated_node.body.body
         return updated_node.with_changes(body=updated_node.body.with_changes(body=(statement, *body)))

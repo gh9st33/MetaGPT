@@ -35,8 +35,7 @@ class WriteTest(Action):
 
     async def write_code(self, prompt):
         code_rsp = await self._aask(prompt)
-        code = CodeParser.parse_code(block="", text=code_rsp)
-        return code
+        return CodeParser.parse_code(block="", text=code_rsp)
 
     async def run(self, code_to_test, test_file_name, source_file_path, workspace):
         prompt = PROMPT_TEMPLATE.format(
@@ -45,5 +44,4 @@ class WriteTest(Action):
             source_file_path=source_file_path,
             workspace=workspace
         )
-        code = await self.write_code(prompt)
-        return code
+        return await self.write_code(prompt)

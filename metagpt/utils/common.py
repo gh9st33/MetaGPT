@@ -20,9 +20,11 @@ def check_cmd_exists(command) -> int:
     :param command: 待检查的命令
     :return: 如果命令存在，返回0，如果不存在，返回非0
     """
-    check_command = 'command -v ' + command + ' >/dev/null 2>&1 || { echo >&2 "no mermaid"; exit 1; }'
-    result = os.system(check_command)
-    return result
+    check_command = (
+        f'command -v {command}'
+        + ' >/dev/null 2>&1 || { echo >&2 "no mermaid"; exit 1; }'
+    )
+    return os.system(check_command)
 
 
 class OutputParser:
@@ -51,9 +53,8 @@ class OutputParser:
     @classmethod
     def parse_code(cls, text: str, lang: str = "") -> str:
         pattern = rf'```{lang}.*?\s+(.*?)```'
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            code = match.group(1)
+        if match := re.search(pattern, text, re.DOTALL):
+            code = match[1]
         else:
             raise Exception
         return code
@@ -61,24 +62,19 @@ class OutputParser:
     @classmethod
     def parse_str(cls, text: str):
         text = text.split("=")[-1]
-        text = text.strip().strip("'").strip("\"")
-        return text
+        return text.strip().strip("'").strip("\"")
 
     @classmethod
     def parse_file_list(cls, text: str) -> list[str]:
         # Regular expression pattern to find the tasks list.
         pattern = r'\s*(.*=.*)?(\[.*\])'
 
-        # Extract tasks list string using regex.
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            tasks_list_str = match.group(2)
+        if not (match := re.search(pattern, text, re.DOTALL)):
+            return text.split("\n")
+        tasks_list_str = match[2]
 
             # Convert string representation of list to a Python list using ast.literal_eval.
-            tasks = ast.literal_eval(tasks_list_str)
-        else:
-            tasks = text.split("\n")
-        return tasks
+        return ast.literal_eval(tasks_list_str)
     
     @staticmethod
     def parse_python_code(text: str) -> str:
@@ -89,7 +85,7 @@ class OutputParser:
             match = re.search(pattern, text, re.DOTALL)
             if not match:
                 continue
-            code = match.group("code")
+            code = match["code"]
             if not code:
                 continue
             with contextlib.suppress(Exception):
@@ -103,16 +99,11 @@ class OutputParser:
         parsed_data = {}
         for block, content in block_dict.items():
             # 尝试去除code标记
-            try:
+            with contextlib.suppress(Exception):
                 content = cls.parse_code(text=content)
-            except Exception:
-                pass
-
             # 尝试解析list
-            try:
+            with contextlib.suppress(Exception):
                 content = cls.parse_file_list(text=content)
-            except Exception:
-                pass
             parsed_data[block] = content
         return parsed_data
 
@@ -122,21 +113,17 @@ class OutputParser:
         parsed_data = {}
         for block, content in block_dict.items():
             # 尝试去除code标记
-            try:
+            with contextlib.suppress(Exception):
                 content = cls.parse_code(text=content)
-            except Exception:
-                pass
             typing_define = mapping.get(block, None)
             if isinstance(typing_define, tuple):
                 typing = typing_define[0]
             else:
                 typing = typing_define
-            if typing == List[str] or typing == List[Tuple[str, str]]:
+            if typing in [List[str], List[Tuple[str, str]]]:
                 # 尝试解析list
-                try:
+                with contextlib.suppress(Exception):
                     content = cls.parse_file_list(text=content)
-                except Exception:
-                    pass
             # TODO: 多余的引号去除有风险，后期再解决
             # elif typing == str:
             #     # 尝试去除多余的引号
@@ -153,10 +140,7 @@ class CodeParser:
     @classmethod
     def parse_block(cls, block: str, text: str) -> str:
         blocks = cls.parse_blocks(text)
-        for k, v in blocks.items():
-            if block in k:
-                return v
-        return ""
+        return next((v for k, v in blocks.items() if block in k), "")
 
     @classmethod
     def parse_blocks(cls, text: str):
@@ -181,9 +165,8 @@ class CodeParser:
         if block:
             text = cls.parse_block(block, text)
         pattern = rf'```{lang}.*?\s+(.*?)```'
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            code = match.group(1)
+        if match := re.search(pattern, text, re.DOTALL):
+            code = match[1]
         else:
             logger.error(f"{pattern} not match following text:")
             logger.error(text)
@@ -204,16 +187,11 @@ class CodeParser:
         # print(code)
         pattern = r'\s*(.*=.*)?(\[.*\])'
 
-        # Extract tasks list string using regex.
-        match = re.search(pattern, code, re.DOTALL)
-        if match:
-            tasks_list_str = match.group(2)
-
-            # Convert string representation of list to a Python list using ast.literal_eval.
-            tasks = ast.literal_eval(tasks_list_str)
-        else:
+        if not (match := re.search(pattern, code, re.DOTALL)):
             raise Exception
-        return tasks
+        tasks_list_str = match[2]
+
+        return ast.literal_eval(tasks_list_str)
 
 
 class NoMoneyException(Exception):
@@ -253,4 +231,4 @@ def print_members(module, indent=0):
 def parse_recipient(text):
     pattern = r"## Send To:\s*([A-Za-z]+)\s*?"  # hard code for now
     recipient = re.search(pattern, text)
-    return recipient.group(1) if recipient else ""
+    return recipient[1] if recipient else ""

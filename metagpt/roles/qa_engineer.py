@@ -64,7 +64,7 @@ class QaEngineer(Role):
             code_to_test = open(file_path, "r").read()
             if "test" in file_name:
                 continue # Engineer might write some test files, skip testing a test file
-            test_file_name = "test_" + file_name
+            test_file_name = f"test_{file_name}"
             test_file_path = self.get_workspace() / "tests" / test_file_name
             logger.info(f'Writing {test_file_name}..')
             test_code = await WriteTest().run(
@@ -88,7 +88,7 @@ class QaEngineer(Role):
                 sent_from=self.profile, send_to=self.profile
             )
             self._publish_message(msg)
-        
+
         logger.info(f'Done {self.get_workspace()}/tests generating.')
     
     async def _run_code(self, msg):
@@ -140,12 +140,13 @@ class QaEngineer(Role):
 
     async def _act(self) -> Message:
         if self.test_round > self.test_round_allowed:
-            result_msg = Message(
+            return Message(
                 content=f"Exceeding {self.test_round_allowed} rounds of tests, skip (writing code counts as a round, too)",
-                role=self.profile, cause_by=WriteTest, sent_from=self.profile, send_to=""
+                role=self.profile,
+                cause_by=WriteTest,
+                sent_from=self.profile,
+                send_to="",
             )
-            return result_msg
-
         for msg in self._rc.news:
             # Decide what to do based on observed msg type, currently defined by human,
             # might potentially be moved to _think, that is, let the agent decides for itself
@@ -159,8 +160,10 @@ class QaEngineer(Role):
                 # I ran my test code, time to fix bugs, if any
                 await self._debug_error(msg)
         self.test_round += 1
-        result_msg = Message(
+        return Message(
             content=f"Round {self.test_round} of tests done",
-            role=self.profile, cause_by=WriteTest, sent_from=self.profile, send_to=""
+            role=self.profile,
+            cause_by=WriteTest,
+            sent_from=self.profile,
+            send_to="",
         )
-        return result_msg
