@@ -81,7 +81,7 @@ class RunCode(Action):
         # Modify the PYTHONPATH environment variable
         additional_python_paths = [working_directory] + additional_python_paths
         additional_python_paths = ":".join(additional_python_paths)
-        env['PYTHONPATH'] = additional_python_paths + ':' + env.get('PYTHONPATH', '')
+        env['PYTHONPATH'] = f'{additional_python_paths}:' + env.get('PYTHONPATH', '')
 
         # Start the subprocess
         process = subprocess.Popen(command, cwd=working_directory, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
@@ -118,6 +118,4 @@ class RunCode(Action):
         prompt = PROMPT_TEMPLATE.format(context=context)
         rsp = await self._aask(prompt)
 
-        result = context + rsp
-
-        return result
+        return context + rsp
